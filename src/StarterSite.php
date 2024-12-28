@@ -26,6 +26,8 @@ class StarterSite extends Site {
 		add_action( 'after_setup_theme', [ $this, 'theme_supports' ] );
 		add_action( 'init', [ $this, 'register_post_types' ] );
 		add_action( 'init', [ $this, 'register_taxonomies' ] );
+		add_action( 'init', [ $this, 'security_configuration']);
+		add_action( 'wp_enqueue_scripts', [$this, 'enqueue_scripts'] );
 
 		add_filter( 'timber/context', [ $this, 'add_to_context' ] );
 		add_filter( 'timber/twig/filters', [ $this, 'add_filters_to_twig' ] );
@@ -46,14 +48,28 @@ class StarterSite extends Site {
 	public function register_taxonomies() {}
 
 	/**
+	 * This is where you can add css & js.
+	 */
+	public function enqueue_scripts() {
+		$manifestPath = get_theme_file_path('dist/.vite/manifest.json');
+		// Check if the manifest file exists and is readable before using it
+		if (file_exists($manifestPath)) {
+			$manifest = json_decode(file_get_contents($manifestPath), true);
+			// Check if the file is in the manifest before enqueuing
+			if (isset($manifest['assets/scripts/main.js'])) {
+				wp_enqueue_script('eddaoust_theme', get_theme_file_uri('dist/' . $manifest['assets/scripts/main.js']['file']), [], '', ['strategy' => 'defer', 'in_footer' => true]);
+				// Enqueue the CSS file
+				wp_enqueue_style('eddaoust', get_theme_file_uri('dist/' . $manifest['assets/scripts/main.js']['css'][0]));
+			}
+		}
+	}
+
+	/**
 	 * This is where you add some context.
 	 *
 	 * @param array $context context['this'] Being the Twig's {{ this }}
 	 */
 	public function add_to_context( $context ) {
-		$context['foo']   = 'bar';
-		$context['stuff'] = 'I am a value set in your functions.php file';
-		$context['notes'] = 'These values are available everytime you call Timber::context();';
 		$context['menu']  = Timber::get_menu( 'primary_navigation' );
 		$context['site']  = $this;
 
@@ -122,17 +138,9 @@ class StarterSite extends Site {
 		);
 
 		add_theme_support( 'menus' );
-	}
-
-	/**
-	 * This would return 'foo bar!'.
-	 *
-	 * @param string $text being 'foo', then returned 'foo bar!'
-	 */
-	public function myfoo( $text ) {
-		$text .= ' bar!';
-
-		return $text;
+		add_theme_support( 'customize-selective-refresh-widgets' );
+		add_theme_support( 'align-wide' );
+		add_theme_support( 'responsive-embeds' );
 	}
 
 	/**
@@ -182,5 +190,166 @@ class StarterSite extends Site {
 		// $options['autoescape'] = true;
 
 		return $options;
+	}
+
+	/**
+	 * Several safety and comfort configurations
+	 *
+	 * @return void
+	 */
+	public function security_configuration() {
+		/**
+		 * Removes x-powered-by header which is set by PHP
+		 */
+		header_remove('x-powered-by');
+
+		/**
+		 * Remove X-Pingback header
+		 */
+		add_filter('pings_open', function() {
+			return false;
+		});
+
+		/**
+		 * Disables xmlrpc.php
+		 * Disable only if your site does not require use of xmlrpc
+		 */
+		add_filter('xmlrpc_enabled', function() {
+			return false;
+		});
+
+		/**
+		 * Disables REST API completely for non-logged in users
+		 * Use this option only if your site does not require use of REST API
+		 */
+		add_filter('rest_authentication_errors', function($result) {
+			return (is_user_logged_in()) ? $result : new WP_Error('rest_not_logged_in', 'You are not currently logged in.', array('status' => 401));
+		});
+
+		/**
+		 * Disables Wordpress default REST API endpoints.
+		 * Use this option if your plugins require use of REST API, but would still like to disable core endpoints.
+		 */
+		add_filter('rest_endpoints', function($endpoints) {
+			// If user is logged in, allow all endpoints
+			if(is_user_logged_in()) {
+				return $endpoints;
+			}
+			foreach($endpoints as $route => $endpoint) {
+				if(stripos($route, '/wp/') === 0) {
+					unset($endpoints[ $route ]);
+				}
+			}
+			return $endpoints;
+		});
+
+		/**
+		 * Disable plugins auto-update email notifications
+		 */
+		add_filter( 'auto_plugin_update_send_email', function() {
+			return false;
+		});
+
+		/**
+		 * Disable themes auto-update email notifications
+		 */
+		add_filter( 'auto_theme_update_send_email', function() {
+			return false;
+		});
+
+		/**
+		 * Removes unnecessary information from <head> tag
+		 */
+		add_action('init', function() {
+			// Remove post and comment feed link
+			remove_action( 'wp_head', 'feed_links', 2 );
+			// Remove post category links
+			remove_action('wp_head', 'feed_links_extra', 3);
+			// Remove link to the Really Simple Discovery service endpoint
+			remove_action('wp_head', 'rsd_link');
+			// Remove the link to the Windows Live Writer manifest file
+			remove_action('wp_head', 'wlwmanifest_link');
+			// Remove the XHTML generator that is generated on the wp_head hook, WP version
+			remove_action('wp_head', 'wp_generator');
+			// Remove start link
+			remove_action('wp_head', 'start_post_rel_link');
+			// Remove index link
+			remove_action('wp_head', 'index_rel_link');
+			// Remove previous link
+			remove_action('wp_head', 'parent_post_rel_link', 10, 0);
+			// Remove relational links for the posts adjacent to the current post
+			remove_action('wp_head', 'adjacent_posts_rel_link_wp_head', 10, 0);
+			// Remove relational links for the posts adjacent to the current post
+			remove_action('wp_head', 'wp_oembed_add_discovery_links');
+			// Remove REST API links
+			remove_action('wp_head', 'rest_output_link_wp_head');
+			// Remove Link header for REST API
+			remove_action('template_redirect', 'rest_output_link_header', 11, 0 );
+			// Remove Link header for shortlink
+			remove_action('template_redirect', 'wp_shortlink_header', 11, 0 );
+			// If you're not using emojis, you can remove the additional JavaScript & CSS used for emoji support
+			remove_action('wp_head', 'print_emoji_detection_script', 7);
+			remove_action('wp_print_styles', 'print_emoji_styles');
+			// If your site and plugins don’t rely on deprecated jQuery functions, you can dequeue jquery-migrate
+			add_action('wp_default_scripts', function( $scripts ) {
+				if ( !is_admin() && isset( $scripts->registered['jquery'] ) ) {
+					$scripts->registered['jquery']->deps = array_diff( $scripts->registered['jquery']->deps, ['jquery-migrate'] );
+				}
+			});
+		});
+
+		/**
+		 * List of feeds to disable
+		 */
+		$feeds = [
+			'do_feed',
+			'do_feed_rdf',
+			'do_feed_rss',
+			'do_feed_rss2',
+			'do_feed_atom',
+			'do_feed_rss2_comments',
+			'do_feed_atom_comments',
+		];
+
+		foreach($feeds as $feed) {
+			add_action($feed, function() {
+				wp_die('Feed has been disabled.');
+			}, 1);
+		}
+
+		/**
+		 * Remove wp-embed.js file from loading
+		 */
+		add_action( 'wp_footer', function() {
+			wp_deregister_script('wp-embed');
+		});
+
+		/**
+		 * Enable WebP image type upload
+		 */
+		add_filter('mime_types', function($existing_mimes) {
+			$existing_mimes['webp'] = 'image/webp';
+			return $existing_mimes;
+		});
+
+		/**
+		 * Display WebP thumbnail
+		 */
+		add_filter('file_is_displayable_image', function($result, $path) {
+			return ($result) ? $result : (empty(@getimagesize($path)) || !in_array(@getimagesize($path)[2], [IMAGETYPE_WEBP]));
+		}, 10, 2);
+
+		/**
+		 * Disabled autoupdate
+		 */
+		add_filter( 'auto_update_plugin', function() {
+			return false;
+		});
+		add_filter( 'auto_update_theme', function() {
+			return false;
+		});
+		add_filter( 'auto_update_core', function() {
+			return false;
+		});
 	}
 }

@@ -1,7 +1,11 @@
 {% extends 'layouts/base.twig' %}
 
 {% block content %}
-    <h2>{{ foo }}</h2>
+    <h2 class="text-2xl text-red-600">{{ foo }}</h2>
+    <div x-data="Open()">
+        <p x-show="opened">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Aliquam consequuntur corporis debitis eius fuga, fugiat hic laudantium magnam molestiae omnis pariatur, praesentium quos sapiente soluta vero voluptas voluptatum. Odit, optio?</p>
+        <button @click="toggleOpen()" class="btn">toggle</button>
+    </div>
     {% for post in posts %}
         {% include ['partials/tease-' ~ post.type ~ '.twig', 'partials/tease.twig'] %}
     {% endfor %}
