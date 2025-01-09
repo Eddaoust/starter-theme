@@ -27,6 +27,7 @@ class StarterSite extends Site {
 		add_action( 'init', [ $this, 'register_post_types' ] );
 		add_action( 'init', [ $this, 'register_taxonomies' ] );
 		add_action( 'init', [ $this, 'security_configuration']);
+		add_action( 'wp_head', [ $this, 'load_custom_fonts']);
 		add_action( 'wp_enqueue_scripts', [$this, 'enqueue_scripts'] );
 
 		add_filter( 'timber/context', [ $this, 'add_to_context' ] );
@@ -74,6 +75,10 @@ class StarterSite extends Site {
 		$context['site']  = $this;
 
 		return $context;
+	}
+
+	public function load_custom_fonts() {
+
 	}
 
 	/**
