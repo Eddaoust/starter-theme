@@ -36,7 +36,8 @@
     }
   ],
   "require": {
-    "timber/timber": "^2.1"
+    "timber/timber": "^2.1",
+    "vinkla/extended-acf": "^14.2"
   },
   "require-dev": {
     "automattic/wordbless": "^0.4.2",
