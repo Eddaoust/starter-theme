@@ -11,6 +11,7 @@ use App\Acf\FieldsManager;
 use App\Theme\Asset;
 use App\Theme\CustomPostType;
 use App\Theme\Menu;
+use App\Theme\MetaBox;
 use App\Theme\Security;
 use App\Theme\Taxonomy;
 use App\Theme\ThemeSupport;
@@ -34,6 +35,7 @@ class StarterSite extends Site {
 		Menu::get_instance();
 		Taxonomy::get_instance();
 		CustomPostType::get_instance();
+		MetaBox::get_instance();
 
 		if(class_exists('ACF')) {
 			FieldsManager::get_instance();
